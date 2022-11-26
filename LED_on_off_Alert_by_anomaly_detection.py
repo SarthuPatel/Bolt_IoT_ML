@@ -4,8 +4,9 @@ import json, time, requests
 
 def led_control(pin,intensity):
     """ Intensity should be in between 0 to 255"""
-    mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id)
-    response = mybolt.analogWrite(f'{pin}', f'{intensity}')
+    mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id) #  we are passing api_key and device_id to Bolt class as constructor arguments and it will return an instance
+    #response = mybolt.digitalWrite('0', 'HIGH') # to turn on the LED without intensity control
+    response = mybolt.analogWrite(f'{pin}', f'{intensity}') #  In Bolt Python library analogWrite function is used as PWM for controlling the Intensity(brightness) of led
     print (response)
     
  def send_telegram_message(message):
@@ -33,7 +34,7 @@ def led_control(pin,intensity):
         return False
       
 mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id)
-print(mybolt.isOnline())
+print(mybolt.isOnline())  # CHECKING THE STATUS OF THE DEVICE
 
 import my_Bolt, json, time, math, statistics
 from boltiot import Sms, Bolt
@@ -48,17 +49,17 @@ def compute_bounds(history_data,frame_size,factor):
         return None
 
     if len(history_data)>frame_size :
-        del history_data[0:len(history_data)-frame_size]
+        del history_data[0:len(history_data)-frame_size] #deleting past datas
         
-    Mn=statistics.mean(history_data)
+    Mn=statistics.mean(history_data)  # finding mean of last 'r' data
     Variance=0
     
     for data in history_data :
-        Variance += math.pow((data-Mn),2)
+        Variance += math.pow((data-Mn),2) #only nominator
         
-    Zn = factor * math.sqrt(Variance / frame_size)
-    High_bound = history_data[frame_size-1]+Zn
-    Low_bound = history_data[frame_size-1]-Zn
+    Zn = factor * math.sqrt(Variance / frame_size) # z-factor
+    High_bound = history_data[frame_size-1]+Zn # Upper bound
+    Low_bound = history_data[frame_size-1]-Zn # Lower bound
     
     return [High_bound,Low_bound]
 
@@ -68,8 +69,8 @@ sms = Sms(my_Bolt.SID, my_Bolt.AUTH_TOKEN, my_Bolt.TO_NUMBER, my_Bolt.FROM_NUMBE
 history_data=[]
 
 while True:
-    # Turning on the poer supply to the LDR sensor
-    response = mybolt.digitalWrite('3', f'{state}')
+    # Turning on the power supply to the LDR sensor
+    response = mybolt.digitalWrite('3', f'{state}') # state = High
     # Reading analog signal
     response = mybolt.analogRead('A0')
     data = json.loads(response)
@@ -78,7 +79,8 @@ while True:
         print("There was an error while retriving the data.")
         print("This is the error:"+data['value'])
         time.sleep(10)
-        continue
+        break
+        #continue
 
     print ("This is the value "+data['value'])
     sensor_value=0
@@ -105,6 +107,7 @@ while True:
             print ("The light level increased suddenly. Sending an SMS.")
             response = sms.send_sms("Someone turned on the lights and Indicator LED OFF.")
             print("This is the response ",response)
+            
         # Turn ON the LED when sudden fall in the light
         elif sensor_value < bound[1]:
             led_control(1,200)
