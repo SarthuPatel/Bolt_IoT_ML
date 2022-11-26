@@ -3,9 +3,11 @@ import my_Bolt
 import json, time, requests
 
 def led_control(pin,intensity):
+    
     """ Intensity should be in between 0 to 255"""
-    mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id)
-    response = mybolt.analogWrite(f'{pin}', f'{intensity}')
+    mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id) #  we are passing api_key and device_id to Bolt class as constructor arguments and it will return an instance
+    #response = mybolt.digitalWrite('0', 'HIGH') # to turn on the LED without intensity control
+    response = mybolt.analogWrite(f'{pin}', f'{intensity}') # In Bolt Python library analogWrite function is used as PWM for controlling the Intensity(brightness) of led
     print (response)
 
 def buzzer_control(pin,noise_level):
@@ -26,12 +28,13 @@ def send_telegram_message(message):
             "POST",
             url,
             params=data
-        )
+        ) # HTTP request to telegram server which includes BOT id, channel id and message to be deliverd
+       
         print("This is the Telegram URL")
         print(url)
         print("This is the Telegram response")
         print(response.text)
-        telegram_data = json.loads(response.text)
+        telegram_data = json.loads(response.text) # Converting telegram respose to the JSON to understand the response
         return telegram_data["ok"]
     except Exception as e:
         print("An error occurred in sending the alert message via Telegram")
@@ -39,7 +42,7 @@ def send_telegram_message(message):
         return False
 
 mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id)
-print(mybolt.isOnline())
+print(mybolt.isOnline()) # CHECKING THE STATUS OF THE DEVICE
 
 # Temperatur_Alert_Function
 
@@ -49,10 +52,13 @@ def temp_alert(min_temp,max_temp):
     minimum_limit = min_temp
     maximum_limit = max_temp
     #print(minimum_limit,maximum_limit)
+    
     # loading required data
     mybolt = Bolt(my_Bolt.api_key, my_Bolt.device_id)
+    
     # Required data taking from the file my_Bolt to send SMS
     sms = Sms(my_Bolt.SID,my_Bolt.AUTH_TOKEN, my_Bolt.TO_NUMBER,my_Bolt.FROM_NUMBER)
+   
     # Required data taking from the file my_Bolt to send Email
     mailer = Email(my_Bolt.MAILGUN_API_KEY, my_Bolt.SANDBOX_URL, my_Bolt.SENDER_EMAIL, my_Bolt.RECIPIENT_EMAIL)
     break_cond = True
@@ -60,19 +66,23 @@ def temp_alert(min_temp,max_temp):
     while break_cond: 
         print("Reading sensor value")
         response = mybolt.analogRead('A0') 
-        data = json.loads(response) 
+        data = json.loads(response)  # response from the Bolt Cloud using the analogRead() function is in a JSON format
+        
         if data["success"] != 1:
             print("Request not successfull")
             print("This is the response->", data)
             return -999
         print(data)
         print("Sensor value is: " + str((100*int(data['value']))/1024))
+        
         try: 
             sensor_value = int(data['value']) 
             Live_Temp_C = (100*sensor_value)/1024 
             if Live_Temp_C> maximum_limit or Live_Temp_C < minimum_limit:
+                
                 # Turn On the LED
                 led_control(1,200)
+               
                 # Turn on the buzzer
                 buzzer_control(2,50)
                 print("Making request to Twilio to send a SMS")
@@ -95,6 +105,7 @@ def temp_alert(min_temp,max_temp):
                 
                 # Breaking Condition to stop the While loop
                 break_cond = False
+                
                 # Time up to which buzzzer and LED will turn on
                 time.sleep(5)
                 led_control(1,0)
@@ -102,7 +113,8 @@ def temp_alert(min_temp,max_temp):
         except Exception as e: 
             print ("Error occured: Below are the details")
             print (e)
-        time.sleep(10)
+        
+        time.sleep(10) # It will control data geathering rate.
 
 # Now, Just Try with this to get Output
 temp_alert(20,25)
